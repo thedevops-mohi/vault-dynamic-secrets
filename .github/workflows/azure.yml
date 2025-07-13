@@ -1,0 +1,75 @@
+name: Terraform Azure Workflow
+
+on:
+  push:
+    branches:
+      - main
+   
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+
+jobs:
+  terraform:
+    name: Terraform 
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Retrieve Secret with JWT
+        id: secretdata
+        uses: hashicorp/vault-action@v2.5.0
+        with:
+          method: jwt
+          url: "http://${{ secrets.VAULT_ADDR }}"
+          #namespace: "${{ secrets.VAULT_NAMESPACE }}"
+          namespace: "root"
+          role: "another-jwt-role"
+          secrets: |
+              azure/creds/githubactions client_id | client_id ;
+              azure/creds/githubactions client_secret | client_secret ;
+       
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.0.0
+
+      - name: Initialize 
+        id: init
+        env:
+          ARM_CLIENT_ID: ${{ steps.secretdata.outputs.client_id }}
+          ARM_CLIENT_SECRET: ${{ steps.secretdata.outputs.client_secret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform init
+
+      - name: Validate Terraform configuration
+        id: validate
+        env:
+          ARM_CLIENT_ID: ${{ steps.secretdata.outputs.client_id }}
+          ARM_CLIENT_SECRET: ${{ steps.secretdata.outputs.client_secret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform validate
+
+      - name: Plan Terraform changes
+        id: plan
+        env:
+          ARM_CLIENT_ID: ${{ steps.secretdata.outputs.client_id }}
+          ARM_CLIENT_SECRET: ${{ steps.secretdata.outputs.client_secret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform plan
+
+      - name: Apply Terraform changes
+        id: apply
+        env:
+          ARM_CLIENT_ID: ${{ steps.secretdata.outputs.client_id }}
+          ARM_CLIENT_SECRET: ${{ steps.secretdata.outputs.client_secret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform apply -auto-approve
