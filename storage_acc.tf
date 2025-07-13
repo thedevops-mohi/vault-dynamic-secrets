@@ -9,7 +9,7 @@ data "azurerm_resource_group" "name" {
 }
 
 resource "azurerm_storage_account" "example" {
-  name                     = "createdbyterraformdynamicsecret"
+  name                     = "dynamicsecretmdeey"
   resource_group_name      = data.azurerm_resource_group.name.name
   location                 = data.azurerm_resource_group.name.location
   account_tier             = "Standard"
