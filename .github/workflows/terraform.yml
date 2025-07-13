@@ -28,7 +28,7 @@ jobs:
           url: "http://${{ secrets.VAULT_ADDR }}"
           #namespace: "${{ secrets.VAULT_NAMESPACE }}"
           namespace: "root"
-          role: "jwt-role"
+          role: "another-jwt-role"
           secrets: |
               aws-role/creds/deploy access_key | access_key ;
               aws-role/creds/deploy secret_key | secret_key ;
