@@ -1,0 +1,67 @@
+name: Terraform Workflow
+
+on:
+  push:
+    branches:
+      - main
+   
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+
+jobs:
+  terraform:
+    name: Terraform 
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Retrieve Secret with JWT
+        id: secretdata
+        uses: hashicorp/vault-action@v2.5.0
+        with:
+          method: jwt
+          url: "http://${{ secrets.VAULT_ADDR }}"
+          #namespace: "${{ secrets.VAULT_NAMESPACE }}"
+          namespace: "root"
+          role: "jwt-role"
+          secrets: |
+              aws-role/creds/deploy access_key | access_key ;
+              aws-role/creds/deploy secret_key | secret_key ;
+       
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.0.0
+
+      - name: Initialize 
+        id: init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.secretdata.outputs.access_key }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.secretdata.outputs.secret_key }}
+        run: terraform init
+
+      - name: Validate Terraform configuration
+        id: validate
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.secretdata.outputs.access_key }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.secretdata.outputs.secret_key }}
+        run: terraform validate
+
+      - name: Plan Terraform changes
+        id: plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.secretdata.outputs.access_key }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.secretdata.outputs.secret_key }}
+        run: terraform plan
+
+      - name: Apply Terraform changes
+        id: apply
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.secretdata.outputs.access_key }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.secretdata.outputs.secret_key }}
+        run: terraform apply -auto-approve
